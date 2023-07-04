@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model calle {
+  calle_id   Int         @unique(map: "calle_id_UNIQUE") @default(autoincrement())
+  calle      String      @db.VarChar(75)
+  colonia_id Int
+  colonia    colonia     @relation(fields: [colonia_id], references: [colonia_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_calle_colonia1")
+  direccion  direccion[]
+
+  @@id([calle_id, colonia_id])
+  @@index([colonia_id], map: "fk_calle_colonia1_idx")
+}
+
+model colonia {
+  colonia_id    Int       @unique(map: "colonia_id_UNIQUE") @default(autoincrement())
+  colonia       String    @db.VarChar(75)
+  codigo_postal String    @db.VarChar(5)
+  localidad_id  Int
+  calle         calle[]
+  localidad     localidad @relation(fields: [localidad_id], references: [localidad_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_colonia_localidad1")
+
+  @@id([colonia_id, localidad_id])
+  @@index([localidad_id], map: "fk_colonia_localidad1_idx")
+}
+
+model contratante {
+  contratante_id Int @id @default(autoincrement())
+}
+
+model contrato {
+  contrato_id        Int                @id @unique(map: "contrato_id_UNIQUE") @default(autoincrement())
+  fecha              DateTime?          @db.Date
+  tipo_tarifa        String?            @db.VarChar(25)
+  activo             Int?               @db.TinyInt
+  toma_hidraulica_id String             @unique(map: "toma_hidraulica_id_UNIQUE") @db.VarChar(15)
+  toma_hidraulica    toma_hidraulica    @relation(fields: [toma_hidraulica_id], references: [toma_hidraulica_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_contrato_toma_hidraulica1")
+  contrato_usuario   contrato_usuario[]
+  orden_pago         orden_pago[]
+
+  @@index([toma_hidraulica_id], map: "fk_contrato_toma_hidraulica1_idx")
+}
+
+model contrato_usuario {
+  contrato_id Int
+  usuario_id  Int
+  es_adherido Int?     @db.TinyInt
+  contrato    contrato @relation(fields: [contrato_id], references: [contrato_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_contrato_has_titular_contrato1")
+  usuario     usuario  @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_contrato_has_titular_titular1")
+
+  @@id([contrato_id, usuario_id])
+  @@index([contrato_id], map: "fk_contrato_has_titular_contrato1_idx")
+  @@index([usuario_id], map: "fk_contrato_has_titular_titular1_idx")
+}
+
+model direccion {
+  direccion_id    Int              @unique(map: "direccion_id_UNIQUE") @default(autoincrement())
+  direccion       String?          @db.VarChar(250)
+  num_exterior    String           @db.VarChar(45)
+  num_interior    String?          @db.VarChar(45)
+  referencias     String?          @db.VarChar(150)
+  calle_id        Int
+  calle           calle            @relation(fields: [calle_id], references: [calle_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_direccion_calle1")
+  toma_hidraulica toma_hidraulica?
+
+  @@id([direccion_id, calle_id])
+  @@index([calle_id], map: "fk_direccion_calle1_idx")
+}
+
+model estado {
+  estado_id   Int         @id @unique(map: "estado_id_UNIQUE") @default(autoincrement())
+  estado      String      @db.VarChar(75)
+  abreviatura String      @db.VarChar(10)
+  latitud     String?     @db.VarChar(20)
+  longitud    String?     @db.VarChar(20)
+  municipio   municipio[]
+}
+
+model lectura_medidor {
+  lectura_id       Int       @unique(map: "lectura_id_UNIQUE") @default(autoincrement())
+  fecha            DateTime? @db.Date
+  lectura_anterior Int?
+  lectura_actual   Int?
+  pagada           Int?      @db.TinyInt
+  medidor_id       String    @db.VarChar(45)
+  medidor          medidor   @relation(fields: [medidor_id], references: [medidor_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lectura_medidor_medidor1")
+
+  @@id([lectura_id, medidor_id])
+  @@index([medidor_id], map: "fk_lectura_medidor_medidor1")
+}
+
+model localidad {
+  localidad_id Int       @unique(map: "localidad_id_UNIQUE") @default(autoincrement())
+  localidad    String    @db.VarChar(75)
+  tipo         String?   @db.VarChar(30)
+  municipio_id Int
+  colonia      colonia[]
+  municipio    municipio @relation(fields: [municipio_id], references: [municipio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_localidad_municipio1")
+
+  @@id([localidad_id, municipio_id])
+  @@index([municipio_id], map: "fk_localidad_municipio1_idx")
+}
+
+model medidor {
+  medidor_id      String            @id @unique(map: "medidor_id_UNIQUE") @db.VarChar(45)
+  tipo            String?           @db.VarChar(45)
+  marca           String?           @db.VarChar(45)
+  activo          Int?              @db.TinyInt
+  lectura_medidor lectura_medidor[]
+  toma_hidraulica toma_hidraulica?
+}
+
+model municipio {
+  municipio_id Int         @unique(map: "municipio_id_UNIQUE") @default(autoincrement())
+  municipio    String      @db.VarChar(45)
+  estado_id    Int
+  localidad    localidad[]
+  estado       estado      @relation(fields: [estado_id], references: [estado_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_municipio_estado")
+
+  @@id([municipio_id, estado_id])
+  @@index([estado_id], map: "fk_municipio_estado_idx")
+}
+
+model orden_pago {
+  orden_id            Int                   @id @unique(map: "orden_id_UNIQUE") @default(autoincrement())
+  contrato_id         Int
+  fecha               DateTime?             @db.Date
+  monto_total         Float?                @db.Float
+  pagada              Int?                  @db.TinyInt
+  contrato            contrato              @relation(fields: [contrato_id], references: [contrato_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orden_pago_servicio_contrato1")
+  orden_pago_servicio orden_pago_servicio[]
+  pago                pago[]
+
+  @@index([contrato_id], map: "fk_orden_pago_servicio_contrato1_idx")
+}
+
+model orden_pago_servicio {
+  orden_id             Int
+  servicio_id          Int
+  observaciones        String?              @db.VarChar(100)
+  cantidad             Int?
+  costo_unitario       Float?               @db.Float
+  monto_total          Float?               @db.Float
+  orden_pago           orden_pago           @relation(fields: [orden_id], references: [orden_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orden_pago_servicio_orden_pago1")
+  servicio_por_consumo servicio_por_consumo @relation(fields: [servicio_id], references: [servicio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orden_pago_servicio_servicio_por_consumo1")
+  servicio_por_evento  servicio_por_evento  @relation(fields: [servicio_id], references: [servicio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orden_pago_servicio_servicio_por_evento1")
+  servicio_recurrente  servicio_recurrente  @relation(fields: [servicio_id], references: [servicio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orden_pago_servicio_servicio_recurrente1")
+
+  @@id([orden_id, servicio_id])
+  @@index([orden_id], map: "fk_orden_pago_servicio_orden_pago1_idx")
+  @@index([servicio_id], map: "fk_orden_pago_servicio_servicio_por_consumo1")
+}
+
+model pago {
+  pago_id    Int        @id @unique(map: "pago_id_UNIQUE") @default(autoincrement())
+  orden_id   Int
+  fecha      DateTime?  @db.Date
+  monto      Float?     @db.Float
+  orden_pago orden_pago @relation(fields: [orden_id], references: [orden_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pago_orden_pago1")
+
+  @@index([orden_id], map: "fk_pago_orden_pago1_idx")
+}
+
+model servicio_por_consumo {
+  servicio_id         Int                   @id @unique(map: "servicio_id_UNIQUE") @default(autoincrement())
+  concepto            String?               @db.VarChar(150)
+  unidad_medida       String?               @db.VarChar(15)
+  costo               Float?                @db.Float
+  orden_pago_servicio orden_pago_servicio[]
+}
+
+model servicio_por_evento {
+  servicio_id         Int                   @id @unique(map: "servicio_id_UNIQUE") @default(autoincrement())
+  descripcion         String?               @db.VarChar(150)
+  costo               Float?                @db.Float
+  orden_pago_servicio orden_pago_servicio[]
+}
+
+model servicio_recurrente {
+  servicio_id         Int                   @id @unique(map: "servicio_id_UNIQUE") @default(autoincrement())
+  concepto            String?               @db.VarChar(150)
+  periodicidad        Int?
+  costo               Float?                @db.Float
+  orden_pago_servicio orden_pago_servicio[]
+}
+
+model toma_hidraulica {
+  toma_hidraulica_id String    @id @unique(map: "toma_hidraulica_id_UNIQUE") @db.VarChar(15)
+  latitud            String?   @db.VarChar(20)
+  longitud           String?   @db.VarChar(20)
+  direccion_id       Int       @unique(map: "direccion_id_UNIQUE")
+  medidor_id         String?   @unique(map: "medidor_id_UNIQUE") @db.VarChar(45)
+  contrato           contrato?
+  direccion          direccion @relation(fields: [direccion_id], references: [direccion_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_toma_hidraulica_direccion1")
+  medidor            medidor?  @relation(fields: [medidor_id], references: [medidor_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_toma_hidraulica_medidor1")
+
+  @@index([direccion_id], map: "fk_toma_hidraulica_direccion1_idx")
+  @@index([medidor_id], map: "fk_toma_hidraulica_medidor1_idx")
+}
+
+model usuario {
+  usuario_id       Int                @id @unique(map: "titular_id_UNIQUE") @default(autoincrement())
+  nombre           String             @db.VarChar(75)
+  ap_paterno       String?            @db.VarChar(100)
+  ap_materno       String             @db.VarChar(100)
+  email            String?            @db.VarChar(75)
+  telefono         String?            @db.VarChar(30)
+  fecha_nacimiento DateTime?          @db.Date
+  presento_inapan  Int?               @db.TinyInt
+  url_inapan_img   String?            @db.VarChar(255)
+  presento_ine     Int?               @db.TinyInt
+  url_ine_img      String?            @db.VarChar(255)
+  contrato_usuario contrato_usuario[]
+}
